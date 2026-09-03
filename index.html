@@ -83,7 +83,7 @@
     <div id="camadaBotoes"></div>
     <div id="contagem" hidden></div>
 
-    <button id="btnSom"   class="ctrl" hidden aria-label="Som">🔊</button>
+    <button id="btnSom"   class="ctrl" hidden aria-label="Som"></button>
     <button id="btnPular" class="ctrl" hidden>Pular abertura</button>
     <button id="setaAnt"  class="ctrl seta" hidden aria-label="Anterior">‹</button>
     <button id="setaProx" class="ctrl seta" hidden aria-label="Próxima">›</button>
@@ -110,6 +110,11 @@
   const btnSom = $('#btnSom'), btnPular = $('#btnPular');
   const setaAnt = $('#setaAnt'), setaProx = $('#setaProx'), bolinhas = $('#bolinhas');
   const musica = $('#musica'), carregando = $('#carregando');
+
+  /* ícones do botão de som (Lucide: volume-2 / volume-x) */
+  const ICON_SOM_ON  = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>';
+  const ICON_SOM_OFF = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>';
+  btnSom.innerHTML = ICON_SOM_ON;
 
   const paginas = C.paginas || [];
   const imgs = [];
@@ -164,7 +169,7 @@
     if (C.video && C.video.arquivo){
       estado = 'video';
       mostrar(elVideo);
-      musica.volume = 0;                       // abaixa a música durante o vídeo
+      musica.volume = 0.08;                    // música bem baixinha durante o vídeo
       elVideo.muted = false;
       elVideo.play().catch(() => { elVideo.muted = true; elVideo.play().catch(()=>{}); });
       if (C.video.mostrarBotaoPular !== false) btnPular.hidden = false;
@@ -252,13 +257,17 @@
   /* ---------- eventos ---------- */
   elVideo.addEventListener('ended', fimDoVideo);
   elVideo.addEventListener('error', fimDoVideo);
+  // salvaguarda: se o evento 'ended' falhar, vai para a imagem ao chegar ao fim
+  elVideo.addEventListener('timeupdate', () => {
+    if (estado === 'video' && elVideo.duration && (elVideo.duration - elVideo.currentTime) < 0.35) fimDoVideo();
+  });
   btnPular.addEventListener('click', e => { e.stopPropagation(); fimDoVideo(); });
 
   btnSom.addEventListener('click', e => {
     e.stopPropagation();
     const off = musica.dataset.off === '1';
     musica.dataset.off = off ? '0' : '1';
-    btnSom.textContent = off ? '🔊' : '🔇';
+    btnSom.innerHTML = off ? ICON_SOM_ON : ICON_SOM_OFF;
     if (off) tocarMusica(); else musica.pause();
   });
 

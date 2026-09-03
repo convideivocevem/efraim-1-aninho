@@ -11,7 +11,7 @@ window.CONVITE = {
   /* ---- música de fundo (opcional: deixe arquivo: null para desligar) ---- */
   musica: {
     arquivo: "musica.mp3",
-    volume: 0.55,
+    volume: 0.30,
     ligadaNoInicio: true
   },
 
