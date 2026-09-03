@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Editor de botões do convite</title>
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+       background:#14110c;color:#efe6d4;display:flex;gap:20px;padding:20px;flex-wrap:wrap}
+  h1{font-size:17px;margin:0 0 4px;font-weight:600}
+  p.dica{font-size:13px;color:#a99c85;margin:0 0 14px;line-height:1.5}
+  #area{position:relative;width:340px;flex:0 0 auto;background:#000;
+        aspect-ratio:9/16;overflow:hidden;border-radius:10px;cursor:crosshair;
+        border:1px solid #3a3122}
+  #area img{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none}
+  .box{position:absolute;border:2px solid #ff2d6f;background:rgba(255,45,111,.22);
+       border-radius:8px;font-size:11px;color:#fff;padding:2px 4px;overflow:hidden}
+  .box b{position:absolute;right:2px;top:0;cursor:pointer;color:#fff;font-size:13px}
+  #painel{flex:1;min-width:320px}
+  input,button,textarea{font:inherit}
+  input[type=text]{width:100%;padding:9px 11px;margin:4px 0 10px;border-radius:8px;
+        border:1px solid #4a4030;background:#1e1a12;color:#efe6d4}
+  label{font-size:12px;color:#a99c85}
+  button{padding:9px 15px;border-radius:8px;border:0;background:#c9a227;color:#241c05;
+         font-weight:600;cursor:pointer;margin-right:8px}
+  button.sec{background:#3a3122;color:#efe6d4}
+  textarea{width:100%;height:230px;margin-top:12px;border-radius:10px;padding:12px;
+           border:1px solid #4a4030;background:#0f0d08;color:#9fe3a0;font-family:ui-monospace,monospace;font-size:12px}
+  .linha{display:flex;gap:8px;align-items:center;margin:6px 0;font-size:13px}
+  .linha span{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+</style>
+</head>
+<body>
+
+<div>
+  <div id="area"><img id="fundo" alt=""></div>
+  <p class="dica" style="width:340px;margin-top:10px">
+    Arraste sobre a imagem para desenhar cada botão.
+  </p>
+</div>
+
+<div id="painel">
+  <h1>Editor de botões</h1>
+  <p class="dica">
+    1. Escolha a imagem da página (a mesma que vai em <code>assets/</code>).<br>
+    2. Arraste em cima de cada botão do desenho.<br>
+    3. Preencha o rótulo e o link.<br>
+    4. Copie o resultado e cole no <code>config.js</code>.
+  </p>
+
+  <input type="file" id="arquivo" accept="image/*">
+  <div id="lista" style="margin-top:14px"></div>
+  <div style="margin-top:14px">
+    <button id="copiar">Copiar código</button>
+    <button id="limpar" class="sec">Limpar tudo</button>
+  </div>
+  <textarea id="saida" readonly></textarea>
+</div>
+
+<script>
+const area=document.getElementById('area'), fundo=document.getElementById('fundo');
+const lista=document.getElementById('lista'), saida=document.getElementById('saida');
+let boxes=[], desenhando=null;
+
+document.getElementById('arquivo').onchange = e => {
+  const f = e.target.files[0]; if(!f) return;
+  fundo.src = URL.createObjectURL(f);
+};
+
+area.addEventListener('pointerdown', e => {
+  if(e.target !== area && e.target !== fundo) return;
+  const r = area.getBoundingClientRect();
+  desenhando = { x0:e.clientX-r.left, y0:e.clientY-r.top, el:document.createElement('div') };
+  desenhando.el.className='box';
+  area.appendChild(desenhando.el);
+  area.setPointerCapture(e.pointerId);
+});
+area.addEventListener('pointermove', e => {
+  if(!desenhando) return;
+  const r = area.getBoundingClientRect();
+  const x=e.clientX-r.left, y=e.clientY-r.top;
+  const L=Math.min(x,desenhando.x0), T=Math.min(y,desenhando.y0);
+  const W=Math.abs(x-desenhando.x0), H=Math.abs(y-desenhando.y0);
+  Object.assign(desenhando.el.style,{left:L+'px',top:T+'px',width:W+'px',height:H+'px'});
+  desenhando.dims={L,T,W,H,rw:r.width,rh:r.height};
+});
+area.addEventListener('pointerup', () => {
+  if(!desenhando) return;
+  const d = desenhando.dims;
+  if(!d || d.W<12 || d.H<12){ desenhando.el.remove(); desenhando=null; return; }
+  boxes.push({
+    rotulo:'', href:'',
+    left:+(d.L/d.rw*100).toFixed(2), top:+(d.T/d.rh*100).toFixed(2),
+    width:+(d.W/d.rw*100).toFixed(2), height:+(d.H/d.rh*100).toFixed(2),
+    el: desenhando.el
+  });
+  desenhando=null; render();
+});
+
+function render(){
+  lista.innerHTML='';
+  boxes.forEach((b,i)=>{
+    b.el.innerHTML = (i+1) + '<b>&times;</b>';
+    b.el.querySelector('b').onclick = ev => { ev.stopPropagation(); b.el.remove(); boxes.splice(i,1); render(); };
+    const wrap=document.createElement('div');
+    wrap.innerHTML =
+      `<label>Botão ${i+1} — rótulo</label>
+       <input type="text" data-i="${i}" data-k="rotulo" value="${b.rotulo}" placeholder="Confirmar presença">
+       <label>Link (ou escreva <code>inicio</code> para voltar à capa)</label>
+       <input type="text" data-i="${i}" data-k="href" value="${b.href}" placeholder="https://wa.me/5588...">`;
+    lista.appendChild(wrap);
+  });
+  lista.querySelectorAll('input').forEach(inp=>{
+    inp.oninput = () => { boxes[inp.dataset.i][inp.dataset.k]=inp.value; saidaAtualiza(); };
+  });
+  saidaAtualiza();
+}
+
+function saidaAtualiza(){
+  const linhas = boxes.map(b=>{
+    const alvo = b.href.trim().toLowerCase()==='inicio'
+      ? `acao: "inicio"` : `href: ${JSON.stringify(b.href)}`;
+    return `        { rotulo: ${JSON.stringify(b.rotulo)}, ${alvo},\n` +
+           `          left: ${b.left}, top: ${b.top}, width: ${b.width}, height: ${b.height} }`;
+  });
+  saida.value = `    {\n      imagem: "assets/paginaX.jpg",\n      botoes: [\n${linhas.join(',\n')}\n      ]\n    }`;
+}
+
+document.getElementById('copiar').onclick = () => {
+  saida.select(); document.execCommand('copy');
+  alert('Código copiado! Cole dentro de "paginas" no config.js');
+};
+document.getElementById('limpar').onclick = () => {
+  boxes.forEach(b=>b.el.remove()); boxes=[]; render();
+};
+render();
+</script>
+</body>
+</html>

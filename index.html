@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<title>Convite</title>
+<meta name="theme-color" content="#120d06">
+<style>
+  :root{ --bg:#120d06; }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  [hidden]{ display:none !important; }
+  html,body{ margin:0; height:100%; background:var(--bg); overflow:hidden;
+             font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+
+  /* palco 9:16 centralizado, sempre inteiro na tela */
+  #palco{ position:fixed; inset:0; display:grid; place-items:center; }
+  #tela{ position:relative; overflow:hidden; background:#000;
+         width:min(100vw, calc(100dvh * 9 / 16));
+         height:min(100dvh, calc(100vw * 16 / 9));
+         box-shadow:0 0 60px rgba(0,0,0,.6); }
+
+  .midia{ position:absolute; inset:0; width:100%; height:100%;
+          object-fit:cover; opacity:0; transition:opacity .5s ease;
+          pointer-events:none; }
+  .midia.ativa{ opacity:1; }
+
+  /* capa */
+  #chamada{ position:absolute; left:0; right:0; bottom:6%; text-align:center;
+            font-family:Georgia,"Times New Roman",serif; font-size:clamp(16px,4.6vmin,30px);
+            letter-spacing:.06em; text-shadow:0 2px 10px rgba(0,0,0,.65);
+            animation:pulsa 1.9s ease-in-out infinite; pointer-events:none; }
+  @keyframes pulsa{ 0%,100%{opacity:.55; transform:translateY(0)} 50%{opacity:1; transform:translateY(-4px)} }
+
+  /* camada de botões invisíveis */
+  #camadaBotoes{ position:absolute; inset:0; }
+  .hot{ position:absolute; display:block; border-radius:14px;
+        background:transparent; text-indent:-9999px; overflow:hidden; }
+  .hot:active{ background:rgba(255,255,255,.14); }
+  body.debug .hot{ background:rgba(255,0,90,.28); outline:2px dashed #ff0059; }
+
+  /* controles */
+  .ctrl{ position:absolute; z-index:6; border:0; cursor:pointer; color:#fff;
+         background:rgba(0,0,0,.42); backdrop-filter:blur(6px);
+         border-radius:999px; font-size:14px; line-height:1;
+         display:flex; align-items:center; gap:7px; }
+  #btnPular{ right:14px; top:14px; padding:10px 16px; }
+  #btnSom{ left:14px; top:14px; width:42px; height:42px; justify-content:center; font-size:18px; }
+  .seta{ top:50%; transform:translateY(-50%); width:40px; height:56px;
+         justify-content:center; font-size:22px; background:rgba(0,0,0,.28); }
+  #setaAnt{ left:8px; } #setaProx{ right:8px; }
+  .ctrl[hidden]{ display:none !important; }
+
+  #bolinhas{ position:absolute; z-index:6; left:0; right:0; bottom:14px;
+             display:flex; gap:7px; justify-content:center; pointer-events:none; }
+  #bolinhas i{ width:7px; height:7px; border-radius:50%; background:rgba(255,255,255,.4); }
+  #bolinhas i.on{ background:#fff; transform:scale(1.25); }
+
+  #contagem{ position:absolute; z-index:5; text-align:center; pointer-events:none;
+             font-size:clamp(14px,4vmin,26px); font-weight:600;
+             text-shadow:0 2px 10px rgba(0,0,0,.6); }
+
+  /* carregando */
+  #carregando{ position:absolute; inset:0; z-index:10; display:grid; place-items:center;
+               background:var(--bg); color:#e8d9b8; font-size:14px; letter-spacing:.15em;
+               transition:opacity .4s; }
+  #carregando.some{ opacity:0; pointer-events:none; }
+  .aro{ width:34px; height:34px; border:2px solid rgba(255,255,255,.25);
+        border-top-color:#e8d9b8; border-radius:50%; animation:gira .9s linear infinite;
+        margin:0 auto 14px; }
+  @keyframes gira{ to{ transform:rotate(360deg) } }
+</style>
+</head>
+<body>
+
+<div id="palco">
+  <div id="tela">
+    <img id="capa" class="midia" alt="">
+    <div id="chamada"></div>
+
+    <video id="video" class="midia" playsinline webkit-playsinline preload="auto"></video>
+
+    <div id="paginas"></div>
+    <div id="camadaBotoes"></div>
+    <div id="contagem" hidden></div>
+
+    <button id="btnSom"   class="ctrl" hidden aria-label="Som">🔊</button>
+    <button id="btnPular" class="ctrl" hidden>Pular abertura</button>
+    <button id="setaAnt"  class="ctrl seta" hidden aria-label="Anterior">‹</button>
+    <button id="setaProx" class="ctrl seta" hidden aria-label="Próxima">›</button>
+    <div id="bolinhas" hidden></div>
+
+    <div id="carregando"><div><div class="aro"></div>CARREGANDO</div></div>
+  </div>
+</div>
+
+<audio id="musica" loop preload="auto"></audio>
+
+<script src="config.js"></script>
+<script>
+(function(){
+  const C = window.CONVITE || {};
+  const $ = s => document.querySelector(s);
+
+  document.title = C.titulo || "Convite";
+  if (C.corFundo) document.documentElement.style.setProperty('--bg', C.corFundo);
+  if (location.hash === '#debug') document.body.classList.add('debug');
+
+  const elCapa = $('#capa'), elChamada = $('#chamada'), elVideo = $('#video');
+  const elPaginas = $('#paginas'), elBotoes = $('#camadaBotoes'), elContagem = $('#contagem');
+  const btnSom = $('#btnSom'), btnPular = $('#btnPular');
+  const setaAnt = $('#setaAnt'), setaProx = $('#setaProx'), bolinhas = $('#bolinhas');
+  const musica = $('#musica'), carregando = $('#carregando');
+
+  const paginas = C.paginas || [];
+  const imgs = [];
+  let estado = 'capa';      // capa | video | pagina
+  let atual = 0;            // índice da página
+
+  /* ---------- montagem ---------- */
+  elCapa.src = (C.capa && C.capa.imagem) || '';
+  elChamada.textContent = (C.capa && C.capa.chamada) || '';
+  if (C.capa && C.capa.corChamada) elChamada.style.color = C.capa.corChamada;
+
+  paginas.forEach(p => {
+    const im = document.createElement('img');
+    im.className = 'midia'; im.src = p.imagem; im.alt = '';
+    elPaginas.appendChild(im); imgs.push(im);
+  });
+
+  if (C.navegacao && C.navegacao.bolinhas && paginas.length > 1){
+    paginas.forEach(() => bolinhas.appendChild(document.createElement('i')));
+  }
+
+  if (C.musica && C.musica.arquivo){
+    musica.src = C.musica.arquivo;
+    musica.volume = C.musica.volume != null ? C.musica.volume : .55;
+  }
+  if (C.video && C.video.arquivo) elVideo.src = C.video.arquivo;
+  if (C.video && C.video.textoPular) btnPular.textContent = C.video.textoPular;
+
+  /* ---------- pré-carga ---------- */
+  const paraCarregar = [ (C.capa||{}).imagem, ...paginas.map(p=>p.imagem) ].filter(Boolean);
+  let restam = paraCarregar.length || 1;
+  const pronto = () => { if (--restam <= 0) carregando.classList.add('some'); };
+  paraCarregar.forEach(src => { const i = new Image(); i.onload = i.onerror = pronto; i.src = src; });
+  setTimeout(() => carregando.classList.add('some'), 4000); // trava de segurança
+
+  /* ---------- helpers ---------- */
+  function mostrar(el){
+    [elCapa, elVideo, ...imgs].forEach(m => m.classList.toggle('ativa', m === el));
+  }
+  function tocarMusica(){
+    if (!musica.src || musica.dataset.off === '1') return;
+    musica.play().catch(()=>{});
+  }
+
+  /* ---------- fluxo ---------- */
+  function abrir(){
+    if (estado !== 'capa') return;
+    elChamada.style.display = 'none';
+    if (C.musica && C.musica.arquivo && (C.musica.ligadaNoInicio !== false)){
+      btnSom.hidden = false; tocarMusica();
+    }
+    if (C.video && C.video.arquivo){
+      estado = 'video';
+      mostrar(elVideo);
+      musica.volume = 0;                       // abaixa a música durante o vídeo
+      elVideo.muted = false;
+      elVideo.play().catch(() => { elVideo.muted = true; elVideo.play().catch(()=>{}); });
+      if (C.video.mostrarBotaoPular !== false) btnPular.hidden = false;
+    } else {
+      irPara(0);
+    }
+  }
+
+  function fimDoVideo(){
+    if (estado !== 'video') return;
+    try { elVideo.pause(); } catch(e){}
+    btnPular.hidden = true;
+    musica.volume = C.musica && C.musica.volume != null ? C.musica.volume : .55;
+    irPara(0);
+  }
+
+  function irPara(i){
+    if (!paginas.length) return;
+    atual = Math.max(0, Math.min(paginas.length - 1, i));
+    estado = 'pagina';
+    mostrar(imgs[atual]);
+    desenharBotoes();
+    atualizarNav();
+    atualizarContagem();
+  }
+
+  function desenharBotoes(){
+    elBotoes.innerHTML = '';
+    (paginas[atual].botoes || []).forEach(b => {
+      const a = document.createElement('a');
+      a.className = 'hot';
+      a.style.cssText = `left:${b.left}%;top:${b.top}%;width:${b.width}%;height:${b.height}%`;
+      a.textContent = b.rotulo || '';
+      a.setAttribute('aria-label', b.rotulo || 'botão');
+      if (b.acao === 'inicio'){
+        a.href = '#'; a.onclick = e => { e.preventDefault(); reiniciar(); };
+      } else if (b.acao === 'proxima'){
+        a.href = '#'; a.onclick = e => { e.preventDefault(); irPara(atual + 1); };
+      } else {
+        a.href = b.href || '#';
+        a.target = '_blank'; a.rel = 'noopener';
+      }
+      elBotoes.appendChild(a);
+    });
+  }
+
+  function atualizarNav(){
+    const nav = C.navegacao || {};
+    if (nav.setas && paginas.length > 1){
+      setaAnt.hidden = atual === 0;
+      setaProx.hidden = atual === paginas.length - 1;
+    }
+    if (nav.bolinhas && paginas.length > 1){
+      bolinhas.hidden = false;
+      [...bolinhas.children].forEach((d,i) => d.classList.toggle('on', i === atual));
+    }
+  }
+
+  function reiniciar(){
+    estado = 'capa'; atual = 0;
+    elChamada.style.display = '';
+    elBotoes.innerHTML = '';
+    setaAnt.hidden = setaProx.hidden = true; bolinhas.hidden = true;
+    elContagem.hidden = true;
+    mostrar(elCapa);
+  }
+
+  /* ---------- contagem regressiva ---------- */
+  const cfgC = C.contagem || {};
+  function atualizarContagem(){
+    if (!cfgC.ativa || estado !== 'pagina' || (cfgC.pagina || 1) - 1 !== atual){
+      elContagem.hidden = true; return;
+    }
+    elContagem.hidden = false;
+    elContagem.style.cssText =
+      `left:${cfgC.left}%;top:${cfgC.top}%;width:${cfgC.width}%;color:${cfgC.cor||'#fff'};font-family:${cfgC.fonte||'inherit'}`;
+    const dif = new Date(cfgC.data) - new Date();
+    if (isNaN(dif)) { elContagem.hidden = true; return; }
+    if (dif <= 0){ elContagem.textContent = 'É hoje! 🎉'; return; }
+    const d = Math.floor(dif/864e5), h = Math.floor(dif/36e5)%24, m = Math.floor(dif/6e4)%60;
+    elContagem.textContent = `Faltam ${d}d ${h}h ${m}min`;
+  }
+  setInterval(atualizarContagem, 30000);
+
+  /* ---------- eventos ---------- */
+  elVideo.addEventListener('ended', fimDoVideo);
+  elVideo.addEventListener('error', fimDoVideo);
+  btnPular.addEventListener('click', e => { e.stopPropagation(); fimDoVideo(); });
+
+  btnSom.addEventListener('click', e => {
+    e.stopPropagation();
+    const off = musica.dataset.off === '1';
+    musica.dataset.off = off ? '0' : '1';
+    btnSom.textContent = off ? '🔊' : '🔇';
+    if (off) tocarMusica(); else musica.pause();
+  });
+
+  setaAnt.addEventListener('click', e => { e.stopPropagation(); irPara(atual - 1); });
+  setaProx.addEventListener('click', e => { e.stopPropagation(); irPara(atual + 1); });
+
+  $('#tela').addEventListener('click', e => {
+    if (e.target.closest('.ctrl') || e.target.closest('.hot')) return;
+    if (estado === 'capa') return abrir();
+    if (estado === 'video'){                    // toque no vídeo religa o som
+      if (elVideo.muted){ elVideo.muted = false; elVideo.play().catch(()=>{}); }
+      return;
+    }
+    if ((C.navegacao||{}).toqueAvanca && atual < paginas.length - 1) irPara(atual + 1);
+  });
+
+  // arrastar para os lados
+  let x0 = null;
+  $('#tela').addEventListener('touchstart', e => { x0 = e.touches[0].clientX; }, {passive:true});
+  $('#tela').addEventListener('touchend', e => {
+    if (x0 == null || estado !== 'pagina') return;
+    const dx = e.changedTouches[0].clientX - x0; x0 = null;
+    if (Math.abs(dx) > 50) irPara(atual + (dx < 0 ? 1 : -1));
+  }, {passive:true});
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight') irPara(atual + 1);
+    if (e.key === 'ArrowLeft')  irPara(atual - 1);
+    if (e.key === 'Enter' && estado === 'capa') abrir();
+  });
+
+  mostrar(elCapa);
+})();
+</script>
+</body>
+</html>
