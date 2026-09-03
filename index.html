@@ -169,7 +169,7 @@
     if (C.video && C.video.arquivo){
       estado = 'video';
       mostrar(elVideo);
-      musica.volume = 0.08;                    // música bem baixinha durante o vídeo
+      musica.volume = 0.05;                    // música bem baixinha durante o vídeo
       elVideo.muted = false;
       elVideo.play().catch(() => { elVideo.muted = true; elVideo.play().catch(()=>{}); });
       if (C.video.mostrarBotaoPular !== false) btnPular.hidden = false;
