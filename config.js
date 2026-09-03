@@ -43,8 +43,7 @@ window.CONVITE = {
         { rotulo: "Localização",
           href: "https://share.google/vLKFVnV4Y1CINQvgQ",
           left: 38.5, top: 79, width: 22, height: 14 },
-        { rotulo: "Sugestões de presentes",
-          href: "https://wa.me/5588966653004?text=Oi!%20Gostaria%20de%20uma%20sugest%C3%A3o%20de%20presente%20para%20o%20anivers%C3%A1rio%20do%20Efraim%20%F0%9F%8E%81",
+        { rotulo: "Sugestões de presentes", acao: "imagem", imagem: "presentes.jpg",
           left: 63.5, top: 79, width: 22, height: 14 }
       ]
     }

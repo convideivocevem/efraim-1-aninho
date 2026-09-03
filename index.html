@@ -68,6 +68,16 @@
         border-top-color:#e8d9b8; border-radius:50%; animation:gira .9s linear infinite;
         margin:0 auto 14px; }
   @keyframes gira{ to{ transform:rotate(360deg) } }
+
+  /* overlay de imagem (ex.: sugestões de presentes) */
+  #overlay{ position:absolute; inset:0; z-index:8; background:rgba(0,0,0,.92);
+            display:flex; align-items:center; justify-content:center; padding:18px;
+            opacity:0; transition:opacity .3s ease; }
+  #overlay:not([hidden]){ opacity:1; }
+  #overlay img{ max-width:100%; max-height:100%; border-radius:12px;
+                box-shadow:0 12px 44px rgba(0,0,0,.6); }
+  #overlayFechar{ right:14px; top:14px; width:42px; height:42px;
+                  justify-content:center; font-size:20px; z-index:9; }
 </style>
 </head>
 <body>
@@ -90,6 +100,11 @@
     <div id="bolinhas" hidden></div>
 
     <div id="carregando"><div><div class="aro"></div>CARREGANDO</div></div>
+
+    <div id="overlay" hidden>
+      <img id="overlayImg" alt="Sugestões de presentes">
+      <button id="overlayFechar" class="ctrl" aria-label="Fechar">✕</button>
+    </div>
   </div>
 </div>
 
@@ -110,6 +125,13 @@
   const btnSom = $('#btnSom'), btnPular = $('#btnPular');
   const setaAnt = $('#setaAnt'), setaProx = $('#setaProx'), bolinhas = $('#bolinhas');
   const musica = $('#musica'), carregando = $('#carregando');
+  const overlay = $('#overlay'), overlayImg = $('#overlayImg'), overlayFechar = $('#overlayFechar');
+
+  /* ---------- overlay de imagem ---------- */
+  function abrirOverlay(src){ if(!src) return; overlayImg.src = src; overlay.hidden = false; }
+  function fecharOverlay(){ overlay.hidden = true; overlayImg.src = ''; }
+  overlay.addEventListener('click', e => { e.stopPropagation(); fecharOverlay(); });
+  overlayFechar.addEventListener('click', e => { e.stopPropagation(); fecharOverlay(); });
 
   /* ícones do botão de som (Lucide: volume-2 / volume-x) */
   const ICON_SOM_ON  = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>';
@@ -135,6 +157,11 @@
   if (C.navegacao && C.navegacao.bolinhas && paginas.length > 1){
     paginas.forEach(() => bolinhas.appendChild(document.createElement('i')));
   }
+
+  /* pré-carrega imagens abertas por botões (ex.: sugestões de presentes) */
+  paginas.forEach(p => (p.botoes||[]).forEach(b => {
+    if (b.acao === 'imagem' && b.imagem){ const i = new Image(); i.src = b.imagem; }
+  }));
 
   if (C.musica && C.musica.arquivo){
     musica.src = C.musica.arquivo;
@@ -208,6 +235,8 @@
         a.href = '#'; a.onclick = e => { e.preventDefault(); reiniciar(); };
       } else if (b.acao === 'proxima'){
         a.href = '#'; a.onclick = e => { e.preventDefault(); irPara(atual + 1); };
+      } else if (b.acao === 'imagem'){
+        a.href = '#'; a.onclick = e => { e.preventDefault(); abrirOverlay(b.imagem); };
       } else {
         a.href = b.href || '#';
         a.target = '_blank'; a.rel = 'noopener';
