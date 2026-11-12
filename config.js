@@ -38,10 +38,10 @@ window.CONVITE = {
       imagem: "pagina1.jpg",
       botoes: [
         { rotulo: "Confirmar presença",
-          href: "https://wa.me/5588996653004?text=Ol%C3%A1!%20%E2%9C%A8%20Confirmamos%2C%20com%20muita%20alegria%2C%20nossa%20presen%C3%A7a%20na%20celebra%C3%A7%C3%A3o%20do%201%C2%BA%20anivers%C3%A1rio%20do%20Efraim.%20Ser%C3%A1%20uma%20honra%20brindar%20esse%20momento%20t%C3%A3o%20especial!%20%F0%9F%A5%82",
+          href: "https://wa.me/5588981503683?text=Ol%C3%A1!%20%E2%9C%A8%20Confirmamos%2C%20com%20muita%20alegria%2C%20nossa%20presen%C3%A7a%20na%20celebra%C3%A7%C3%A3o%20do%201%C2%BA%20anivers%C3%A1rio%20do%20Efraim.%20Ser%C3%A1%20uma%20honra%20brindar%20esse%20momento%20t%C3%A3o%20especial!%20%F0%9F%A5%82",
           left: 14, top: 79, width: 22, height: 14 },
         { rotulo: "Localização",
-          href: "https://share.google/vLKFVnV4Y1CINQvgQ",
+          href: "https://www.google.com/maps/search/?api=1&query=Rua%20L3%20-%20Cinobilina%20Callou%2C%2097A%2C%20Cirolandia%2C%20Barbalha%20-%20Ceara",
           left: 38.5, top: 79, width: 22, height: 14 },
         { rotulo: "Sugestões de presentes", acao: "imagem", imagem: "presentes.jpg",
           left: 63.5, top: 79, width: 22, height: 14 }
